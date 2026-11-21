@@ -116,7 +116,7 @@ class Bits:
         p = self.p
         e = p + n
         if e > len(self.d) * 8:
-            raise EOFError("неожиданный конец данных")
+            raise EOFError("unexpected end of data")
         b0, b1 = p >> 3, (e + 7) >> 3
         v = int.from_bytes(self.d[b0:b1], "big") >> (b1 * 8 - e)
         self.p = e
@@ -135,7 +135,7 @@ class Bits:
         self.align()
         o = self.p >> 3
         if o + n > len(self.d):
-            raise EOFError("неожиданный конец данных")
+            raise EOFError("unexpected end of data")
         self.p += n * 8
         return self.d[o:o + n]
 
@@ -211,7 +211,7 @@ def load_swf(src):
         body = lzma.LZMADecompressor(lzma.FORMAT_ALONE).decompress(
             props + b"\xff" * 8 + stream)
     else:
-        raise ValueError("не SWF файл")
+        raise ValueError("not an SWF file")
     b = Bits(body)
     rect = b.rect()
     fps = b.u16() / 256.0
@@ -295,7 +295,7 @@ def decode_lossless(d, v2):
             out[o:o + 4] = bytes(unpremul(r, g, b, a) if v2 else (r, g, b, 255))
             o += 4
     else:
-        raise ValueError("неизвестный формат lossless: %d" % fmt_)
+        raise ValueError("unknown lossless format: %d" % fmt_)
     return cid, write_png(w, h, out)
 
 
@@ -399,7 +399,7 @@ def make_wav(data, rate, bits, ch):
 
 
 def sound_payload(fmt_, rate, bits, ch, blocks, count=None):
-    """blocks — список кусков данных. -> (ext, bytes)"""
+    """blocks - list of data chunks. -> (ext, bytes)"""
     if fmt_ == 2:
         return "mp3", b"".join(blocks)
     if fmt_ in (0, 3):
@@ -435,7 +435,7 @@ def read_fill(b, ver):
         st["bmp"] = b.u16()
         st["m"] = b.matrix()
     else:
-        raise ValueError("неизвестный тип заливки 0x%x" % t)
+        raise ValueError("unknown fill type 0x%x" % t)
     return st
 
 
@@ -555,7 +555,7 @@ def read_morph_fill(b):
         s["bmp"] = e["bmp"] = b.u16()
         s["m"], e["m"] = b.matrix(), b.matrix()
     else:
-        raise ValueError("неизвестная morph-заливка 0x%x" % t)
+        raise ValueError("unknown morph fill 0x%x" % t)
     return s, e
 
 
@@ -719,7 +719,7 @@ def chain(edges, close):
 
 
 def paint(st, gid, ex):
-    """-> (значение, непрозрачность, defs)"""
+    """-> (value, opacity, defs)"""
     t = st["t"]
     if t == 0:
         return hx(st["c"]), st["c"][3] / 255.0, ""
@@ -962,7 +962,7 @@ def parse_fontinfo(code, d):
 
 
 def build_ttf(font):
-    raise NotImplementedError("v2 build_ttf не нужен для тестов")
+    raise NotImplementedError("v2 build_ttf is not needed for tests")
 
 
 def parse_text(d, v2):
@@ -1049,7 +1049,7 @@ def skip_filters(b):
         elif t == 6:
             b.bytes(80)
         else:
-            raise ValueError("неизвестный фильтр")
+            raise ValueError("unknown filter")
 
 
 def do_place(code, d, disp, fidx):
@@ -1129,7 +1129,7 @@ def build_timeline(tags):
             elif code == 43:
                 labels[len(frames)] = Bits(d).cstr()
         except Exception as e:
-            warn("таймлайн, тег %d: %s" % (code, e))
+            warn("timeline, tag %d: %s" % (code, e))
     if not frames and disp:
         frames.append([dict(disp[k]) for k in sorted(disp)])
     return frames, labels
@@ -1398,7 +1398,7 @@ class Extractor:
             try:
                 self.handle(code, d)
             except Exception as e:
-                warn("тег %s: %s" % (nm, e))
+                warn("tag %s: %s" % (nm, e))
 
     def handle(self, code, d):
         if code == 8:
@@ -1596,7 +1596,7 @@ class Extractor:
                 if not f["name"]:
                     f["name"] = self.fontnames.get(fid, "")
             except Exception as e:
-                warn("шрифт %s: %s" % (fid, e))
+                warn("font %s: %s" % (fid, e))
         self._fonts[fid] = f
         return f
 
@@ -1721,7 +1721,7 @@ class Extractor:
                     ext, payload = sound_payload(s["fmt"], s["rate"], s["bits"], s["ch"], s["blocks"])
                     self.add("sounds", "stream%d" % i, ext, payload, 19)
                 except Exception as e:
-                    warn("поток %d: %s" % (i, e))
+                    warn("stream %d: %s" % (i, e))
         for a in self.assets:
             if a["kind"] in only or a["kind"] == "raw":
                 out(a["kind"], a["id"], a["ext"], a["data"], a.get("label"), a["tag"])
@@ -1817,7 +1817,7 @@ class Extractor:
                     if want_frames and n > 1:
                         for i, s in enumerate(strs):
                             out("frames", "%s_%04d" % (cid, i + 1), "svg", r.document(box, "<g>%s</g>" % s, bg))
-                guard("спрайт %s" % ("main" if is_main else sid), f)
+                guard("sprite %s" % ("main" if is_main else sid), f)
 
         r = self.swf["rect"]
         info = dict(tool="swf_extract %s" % __version__, version=self.swf["version"],
@@ -1846,12 +1846,12 @@ def collect(inputs):
     return files
 '''))
 _EMBEDDED.append(('swf_decomp', r'''"""
-swf_decomp — общий структуризатор потока управления и декомпилятор ActionScript 1/2.
+swf_decomp - shared control-flow structurer and ActionScript 1/2 decompiler.
 
-Структуризатор (Structurer) работает и для AS2, и для AS3: он восстанавливает
+The Structurer works for both AS2 and AS3: it recovers
 if / else / while / do-while / for-in / break / continue / try / ternary / && / ||
-из плоского списка инструкций. Всё, что восстановить нельзя, остаётся комментарием
-`// goto` — код никогда не теряется.
+from a flat list of instructions. Anything that cannot be recovered is left as a comment
+`// goto` - code is never lost.
 """
 import bisect
 import json
@@ -1938,8 +1938,8 @@ class Ins:
 
 
 class Structurer:
-    """sim: объект с .stack, .out, .exec(ins), .take_cond(ins), .snapshot(), .restore(s),
-    .loop_hook(cond, body_lines) -> lines или None, .begin_catch(info)."""
+    """sim: object with .stack, .out, .exec(ins), .take_cond(ins), .snapshot(), .restore(s),
+    .loop_hook(cond, body_lines) -> lines or None, .begin_catch(info)."""
 
     def __init__(self, ins, sim, tries=None):
         self.ins, self.sim, self.n = ins, sim, len(ins)
@@ -1967,7 +1967,7 @@ class Structurer:
         return self.ins[i].addr if i < self.n else self.endaddr
 
     def read_cond(self, i):
-        """-> (условие входа в тело, последний индекс cjmp, индекс-цель пропуска)"""
+        """-> (loop body entry condition, last cjmp index, skip target index)"""
         ins, sim = self.ins, self.sim
         T = self.idx(ins[i].target)
         taken = sim.take_cond(ins[i])
@@ -1989,7 +1989,7 @@ class Structurer:
         return enter, last, T
 
     def peek_cjmp(self, start):
-        """Ищет cjmp за «чистыми» инструкциями (без операторов). -> (k, None) или None."""
+        """Looks for a cjmp past "pure" instructions (no statements). -> (k, None) or None."""
         ins, sim = self.ins, self.sim
         k = start
         snap = sim.snapshot()
@@ -2025,7 +2025,7 @@ class Structurer:
 
     def try_switch_as2(self, i, end, ctx):
         """AS2 switch (Flash CS3+): StoreRegister r; (Push c; StrictEquals; If Lk)+; Jump Ldefault/Lend.
-        -> индекс инструкции после switch или None, если паттерн не подошёл."""
+        -> index of the instruction after the switch, or None if the pattern did not match."""
         ins, sim, n = self.ins, self.sim, self.n
         if not sim.stack:
             return None
@@ -2060,7 +2060,7 @@ class Structurer:
         lend = max(cands, key=lambda c: (cands[c], -c)) if cands else dflt
         if lend > end or lend < starts[-1] and lend != dflt:
             return None
-        # значения case: исполняем Push на копии стека
+        # case values: execute Push on a copy of the stack
         vals = []
         for kk, _ in cases:
             snap = sim.snapshot()
@@ -2158,7 +2158,7 @@ class Structurer:
             return i + 1
         cond, last, T = self.read_cond(i)
         if T > end or T <= last:
-            sim.out.append("if (%s) { /* переход за пределы блока L%d */ }" % (strip_par(cond.s), ins[last].target))
+            sim.out.append("if (%s) { /* jump outside the block L%d */ }" % (strip_par(cond.s), ins[last].target))
             return last + 1
         base = list(sim.stack)
         e_idx = None
@@ -2873,7 +2873,7 @@ class AS2Sim:
 
 
 def decompile_as2(data, pool=None, regs=None):
-    """-> список строк"""
+    """-> list of lines"""
     ins = parse_actions(data)
     if not ins:
         return []
@@ -2908,10 +2908,10 @@ def decompile_as2(data, pool=None, regs=None):
                 lines.append(strip_par(e.s) + ";")
         return lines
     except Exception as ex:
-        return ["// не удалось структурировать (%s); дизассемблер:" % ex] + ["// " + l for l in disasm_as2(data, pool)]
+        return ["// could not structure (%s); disassembly:" % ex] + ["// " + l for l in disasm_as2(data, pool)]
 '''))
-_EMBEDDED.append(('swf_extra', r'''"""swf_extra — вспомогательные модули без зависимости от swf_extract_v2:
-фильтры SWF -> SVG, SMIL-хелперы, разложение матриц, сборка TTF/OTF, FLV-аудио, HTML в TextField."""
+_EMBEDDED.append(('swf_extra', r'''"""swf_extra - helper modules with no dependency on swf_extract_v2:
+SWF filters -> SVG, SMIL helpers, matrix decomposition, TTF/OTF building, FLV audio, HTML in TextField."""
 import html as htmlmod
 import io
 import math
@@ -2926,7 +2926,7 @@ def fnum(v):
 
 
 def parse_filters(d, p):
-    """FILTERLIST из PlaceObject3 / кнопок. -> (список dict, новая позиция)"""
+    """FILTERLIST from PlaceObject3 / buttons. -> (list of dicts, new position)"""
     n = d[p]
     p += 1
     res = []
@@ -2993,7 +2993,7 @@ def parse_filters(d, p):
             res.append(dict(t="cmatrix", m=list(struct.unpack_from("<20f", d, p))))
             p += 80
         else:
-            raise ValueError("неизвестный фильтр %d" % t)
+            raise ValueError("unknown filter %d" % t)
     return res, p
 
 
@@ -3029,7 +3029,7 @@ def _ramp(colors, ratios, steps=32):
 
 
 def filter_svg(fid, flist):
-    """Строит <filter> для цепочки фильтров Flash. Единицы — твипы (SVG-группа масштабирована 0.05)."""
+    """Builds a <filter> for a chain of Flash filters. Units are twips (the SVG group is scaled by 0.05)."""
     P = []
     cnt = [0]
     cur = "SourceGraphic"
@@ -3190,7 +3190,7 @@ def cx_filter(fid, cx):
 
 
 def decompose(m):
-    """Матрица SWF (a b c d tx ty) -> (tx, ty, rot°, skewX°, sx, sy) или None."""
+    """SWF matrix (a b c d tx ty) -> (tx, ty, rot°, skewX°, sx, sy) or None."""
     a, b, c, d, tx, ty = m
     sx = math.hypot(a, b)
     if sx < 1e-9:
@@ -3217,8 +3217,8 @@ def runs(vals):
 
 
 def smil(attr, vals, n, dur, begin, kind=None, fill_freeze=True):
-    """Дискретная анимация атрибута по кадрам. vals — список строк (длина n).
-    -> (статическое значение, '') если значения не меняются, иначе (None, <animate…>)."""
+    """Discrete per-frame attribute animation. vals - list of strings (length n).
+    -> (static value, '') if the values do not change, otherwise (None, <animate…>)."""
     r = runs(vals)
     if len(r) == 1:
         return vals[0], ""
@@ -3272,7 +3272,7 @@ def html_runs(text, color="#000000", size=12.0):
 
 
 def flv_audio(fmt, rate_idx, bits16, stereo, blocks):
-    """Nellymoser (4,5,6) и Speex (11) -> FLV (контейнер без перекодирования)."""
+    """Nellymoser (4,5,6) and Speex (11) -> FLV (container, no re-encoding)."""
     hdr = (fmt << 4) | ((3 if fmt == 11 else rate_idx) << 2) | (2 if (bits16 or fmt == 11) else 0) | (1 if stereo and fmt != 11 else 0)
     out = bytearray(b"FLV\x01\x04\x00\x00\x00\x09\x00\x00\x00\x00")
     ts = 0
@@ -3365,7 +3365,7 @@ def _cs_width(cs, default, nominal):
 
 
 def parse_cff(data):
-    """-> dict(n, widths, names)  names[gid] = строка или None"""
+    """-> dict(n, widths, names)  names[gid] = string or None"""
     hs, osz = data[2], data[3]
     _, p = _idx(data, hs)
     tops, p = _idx(data, p)
@@ -3445,7 +3445,7 @@ def _inside(pt, poly):
 
 
 def fix_winding(contours):
-    """Внешние контуры — по часовой (y вверх), дыры — против."""
+    """Outer contours are clockwise (y up), holes are counter-clockwise."""
     res = []
     for i, c in enumerate(contours):
         depth = sum(1 for j, o in enumerate(contours) if j != i and _inside(c[0][:2], o))
@@ -3495,9 +3495,9 @@ def _name(name, italic, bold):
 
 def build_sfnt(name, upm, glyphs, adv, codes, ascent, descent, leading=0, bold=False, italic=False,
                kerning=None, cff=None, cff_info=None):
-    """glyphs[i] = список контуров [(x, y, on)] в единицах шрифта, y вверх.
-    adv[i] — advance в единицах шрифта. codes[i] — Unicode. kerning: {(code1, code2): value}.
-    cff: сырые данные CFF -> OpenType (OTTO) вместо TrueType."""
+    """glyphs[i] = list of contours [(x, y, on)] in font units, y up.
+    adv[i] - advance in font units. codes[i] - Unicode. kerning: {(code1, code2): value}.
+    cff: raw CFF data -> OpenType (OTTO) instead of TrueType."""
     n = len(adv)
     blobs, xmin_all, xmax_all, ymin_all, ymax_all = [], 0, 0, 0, 0
     maxp = maxc = 0
@@ -3606,7 +3606,7 @@ def build_sfnt(name, upm, glyphs, adv, codes, ascent, descent, leading=0, bold=F
     struct.pack_into(">I", fb, head_off + 8, (0xB1B0AFBA - _csum(bytes(fb))) & 0xFFFFFFFF)
     return bytes(fb)
 '''))
-_EMBEDDED.append(('swf_abc', r'''"""swf_abc — разбор ABC (AVM2), дизассемблер и декомпилятор ActionScript 3."""
+_EMBEDDED.append(('swf_abc', r'''"""swf_abc - ABC (AVM2) parser, disassembler and ActionScript 3 decompiler."""
 import re
 import struct
 
@@ -3939,7 +3939,7 @@ class AVM2Sim:
         self.stack.append(e)
 
     def mn_pop(self, i):
-        """снимает со стека runtime-части мультиимени. -> (info, name_expr|None)"""
+        """pops the runtime parts of a multiname off the stack. -> (info, name_expr|None)"""
         info = self.abc.mn_info(i)
         nm = None
         if info["rtname"]:
@@ -4261,7 +4261,7 @@ def sig(abc, mi, name):
 def method_body_lines(abc, mi, nested=0):
     body = abc.bodies.get(mi)
     if body is None:
-        return ["// (нет тела — абстрактный/нативный метод)"]
+        return ["// (no body - abstract/native method)"]
     try:
         ins = abc.parse_code(body["code"])
         if not ins:
@@ -4281,7 +4281,7 @@ def method_body_lines(abc, mi, nested=0):
             lines.pop()
         return lines
     except Exception as ex:
-        return ["// ошибка декомпиляции: %s" % ex] + ["// " + l for l in abc.disasm(body["code"])]
+        return ["// decompilation error: %s" % ex] + ["// " + l for l in abc.disasm(body["code"])]
 
 
 def method_src(abc, mi, name, nested=0):
@@ -4323,7 +4323,7 @@ def trait_src(abc, t, static=False, owner_iface=False):
 
 
 def dump_abc(data):
-    """-> dict имя_файла -> текст"""
+    """-> dict file_name -> text"""
     abc = ABC(data)
     files = {}
     seen_cls = set()
@@ -4373,7 +4373,7 @@ def dump_abc(data):
 
 
 def frame_stops(abc, symbols):
-    """symbols: {cid: classname}. -> {cid: номер кадра (0-based), на котором вызван stop()}"""
+    """symbols: {cid: classname}. -> {cid: frame number (0-based) at which stop() is called}"""
     res = {}
     by_name = {}
     for ci, inst in enumerate(abc.instances):
@@ -4530,7 +4530,7 @@ def place3(code, d, disp, fidx, ver, ctr):
         if fl & 0x80:
             ca = parse_clip_actions(d, b.pos(), ver)
     except Exception as e:
-        warn("PlaceObject: хвост тега: %s" % e)
+        warn("PlaceObject: tag tail: %s" % e)
     old = disp.get(depth)
     if cid is not None and (not fl & 1 or old is None):
         disp[depth] = new(id=cid, depth=depth, m=m, cx=cx, ratio=ratio, clip=clip or 0, blend=blend,
@@ -4574,7 +4574,7 @@ def build_timeline3(tags, ver):
             elif code == 15:
                 extra["sounds"].setdefault(len(frames), []).append(d)
         except Exception as e:
-            warn("таймлайн, тег %d: %s" % (code, e))
+            warn("timeline, tag %d: %s" % (code, e))
     if not frames and disp:
         frames.append([dict(disp[k]) for k in sorted(disp)])
     seen = set()
@@ -4597,7 +4597,7 @@ def tracks(frames, n):
 
 
 def fill(vals, a, b, n):
-    """vals: dict кадр->значение (внутри [a,b)). -> список длины n без пропусков."""
+    """vals: dict frame->value (within [a,b)). -> list of length n with no gaps."""
     first = vals[a]
     out, last = [], first
     for k in range(n):
@@ -4620,7 +4620,7 @@ class Renderer3(Renderer):
             try:
                 self.defs.append(filter_svg(fid, flist))
             except Exception as e:
-                warn("фильтр: %s" % e)
+                warn("filter: %s" % e)
                 fid = None
             self.fcache[key] = fid
         return self.fcache[key]
@@ -4849,7 +4849,7 @@ def parse_font_full(code, d):
 
 
 def font_points(records, k):
-    """Записи глифа -> контуры [(x, y, on)] (y вверх), масштаб k."""
+    """Glyph records -> contours [(x, y, on)] (y up), scale k."""
     out, cur, pos = [], None, None
     for r in records:
         if r[0] == "s":
@@ -4957,7 +4957,7 @@ class Extractor3(Extractor):
             try:
                 self.handle(code, d)
             except Exception as e:
-                warn("тег %s: %s" % (nm, e))
+                warn("tag %s: %s" % (nm, e))
         self.post()
 
     def handle(self, code, d):
@@ -5040,7 +5040,7 @@ class Extractor3(Extractor):
         return self._tl3[tid]
 
     def effective(self, tid):
-        """-> (кадров, зациклено)"""
+        """-> (frames, looped)"""
         if tid in self._eff:
             return self._eff[tid]
         n = len(self.timeline(tid)[0])
@@ -5179,8 +5179,8 @@ class Extractor3(Extractor):
                 r = Renderer3(self)
                 body = r.root(sid, n, loop)
                 if not body.strip("<g></g>"):
-                    # пустой первый кадр + stop(): анимация запускается позже через gotoAndPlay,
-                    # поэтому рендерим весь таймлайн целиком, иначе спрайт теряется молча
+                    # empty first frame + stop(): the animation starts later via gotoAndPlay,
+                    # so render the whole timeline, otherwise the sprite is silently lost
                     tfr = self.timeline(sid)[0]
                     nfull = len(tfr)
                     if nfull <= n or not any(len(fr) for fr in tfr[n:]):
@@ -5190,7 +5190,7 @@ class Extractor3(Extractor):
                         return
                 doc = r.document(box, body, self.bg if sid is None else None)
                 self.emit("sprites", "main.svg" if sid is None else "%s.svg" % self.sname(sid), doc, id=sid, tag=39)
-            self.guard("спрайт %s" % ("main" if sid is None else sid), f)
+            self.guard("sprite %s" % ("main" if sid is None else sid), f)
 
     def save_fonts(self):
         adv = {}
@@ -5218,7 +5218,7 @@ class Extractor3(Extractor):
                         return
                     cff = d[b.pos():]
                     if cff[:4] in (b"OTTO", b"\x00\x01\x00\x00", b"true"):
-                        # данные уже являются готовым sfnt (OpenType/TrueType) - сохраняем как есть
+                        # the data is already a ready-made sfnt (OpenType/TrueType) - save as is
                         ext = "otf" if cff[:4] == b"OTTO" else "ttf"
                         self.emit("fonts", "%d_%s.%s" % (fid, safe(name), ext), cff, id=fid, tag=91)
                         return
@@ -5295,10 +5295,10 @@ class Extractor3(Extractor):
                     r = Renderer3(self)
                     body = "".join(r.item(it, 0, 0) for it in items)
                     self.emit("buttons", "%s_%s.svg" % (self.sname(bid), label), r.document(box, body), id=bid, state=label)
-                self.guard("кнопка %d" % bid, f)
+                self.guard("button %d" % bid, f)
 
     def walk(self, tags):
-        """(номер кадра, код, данные) для всех тегов списка."""
+        """(frame number, code, data) for every tag in the list."""
         fr = 0
         for code, d in tags:
             yield fr, code, d
@@ -5309,7 +5309,7 @@ class Extractor3(Extractor):
         try:
             src = "\n".join(decompile_as2(data))
         except Exception as e:
-            src = "// ошибка: %s" % e
+            src = "// error: %s" % e
         self.emit("scripts", name + ".as", (header + "\n" if header else "") + src + "\n")
         self.emit("scripts", name + ".asm.txt", "\n".join(disasm_as2(data)) + "\n")
 
@@ -5325,16 +5325,16 @@ class Extractor3(Extractor):
         for scope, tags in [("main", self.main_all)] + [("sprite%d" % s, self.sprites[s]["tags"]) for s in sorted(self.sprites)]:
             for fr, code, d in self.walk(tags):
                 if code == 12 and d:
-                    self.guard("AS2", lambda: self.as2_file("%s_frame%03d" % (scope, fr + 1), d, "// %s, кадр %d" % (scope, fr + 1)))
+                    self.guard("AS2", lambda: self.as2_file("%s_frame%03d" % (scope, fr + 1), d, "// %s, frame %d" % (scope, fr + 1)))
                 elif code == 59:
-                    self.guard("AS2", lambda: self.as2_file("%s_init_%d" % (scope, u16(d, 0)), d[2:], "// DoInitAction спрайта %d" % u16(d, 0)))
+                    self.guard("AS2", lambda: self.as2_file("%s_init_%d" % (scope, u16(d, 0)), d[2:], "// DoInitAction of sprite %d" % u16(d, 0)))
         for tid in [None] + sorted(self.sprites):
             for fi, depth, cid, cas in self.timeline(tid)[2]["cactions"]:
                 for k, ca in enumerate(cas):
                     ev = ",".join(ca["events"]) + (" key=%s" % ca["key"] if ca["key"] else "")
                     self.guard("clipaction", lambda: self.as2_file(
                         "clip_%s_f%03d_d%d_%d" % ("main" if tid is None else tid, fi + 1, depth, k), ca["actions"],
-                        "// onClipEvent(%s), клип %d" % (ev, cid)))
+                        "// onClipEvent(%s), clip %d" % (ev, cid)))
         for bid, bt in self.buttons.items():
             for k, a in enumerate(bt["actions"]):
                 self.guard("button", lambda: self.as2_file("button_%d_%d" % (bid, k), a["actions"],
@@ -5395,7 +5395,7 @@ def extract(src, outroot, only, raw=False, frames=False, max_frames=0, list_only
     ex.feed()
     if list_only:
         r = swf["rect"]
-        print("%s: SWF v%d (%s), %gx%g px, %.1f fps, %d кадров" % (
+        print("%s: SWF v%d (%s), %gx%g px, %.1f fps, %d frames" % (
             stem, swf["version"], swf["sig"], (r[1] - r[0]) / 20.0, (r[3] - r[2]) / 20.0, swf["fps"], swf["nframes"]))
         for k, v in sorted(ex.hist.items(), key=lambda x: -x[1]):
             print("   %-28s %d" % (k, v))
@@ -5405,7 +5405,7 @@ def extract(src, outroot, only, raw=False, frames=False, max_frames=0, list_only
     counts = {}
     for m in manifest:
         counts[m["kind"]] = counts.get(m["kind"], 0) + 1
-    print("%s (SWF v%d) -> %s: %s" % (stem, swf["version"], outdir, counts or "ничего не найдено"))
+    print("%s (SWF v%d) -> %s: %s" % (stem, swf["version"], outdir, counts or "nothing found"))
     if depth < 3 and "binary" in only:
         for m in manifest:
             if m["kind"] == "binary" and m["file"].endswith(".swf"):
@@ -5413,33 +5413,33 @@ def extract(src, outroot, only, raw=False, frames=False, max_frames=0, list_only
                     extract(os.path.join(outdir, m["file"]), outdir, only, raw, frames, max_frames, False,
                             "nested_" + os.path.splitext(os.path.basename(m["file"]))[0], depth + 1, decompile)
                 except Exception as e:
-                    warn("вложенный swf: %s" % e)
+                    warn("nested swf: %s" % e)
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Извлечение ассетов из SWF (v%s)" % __version__)
-    ap.add_argument("inputs", nargs="+", help="swf файлы, маски или папки")
+    ap = argparse.ArgumentParser(description="Extract assets from SWF files (v%s)" % __version__)
+    ap.add_argument("inputs", nargs="+", help="SWF files, glob patterns or folders")
     ap.add_argument("-o", "--out", default="swf_out")
-    ap.add_argument("--only", help="категории через запятую: " + ",".join(CATEGORIES3))
-    ap.add_argument("--skip", help="категории, которые пропустить")
-    ap.add_argument("--frames", action="store_true", help="каждый кадр спрайтов отдельным статичным SVG")
-    ap.add_argument("--max-frames", type=int, default=0, help="макс. кадров в анимации (0 = без ограничений)")
-    ap.add_argument("--raw", action="store_true", help="дополнительно дампить сырые теги")
-    ap.add_argument("--no-decompile", action="store_true", help="не декомпилировать ActionScript")
-    ap.add_argument("--list", action="store_true", help="только показать состав файла")
+    ap.add_argument("--only", help="comma-separated categories: " + ",".join(CATEGORIES3))
+    ap.add_argument("--skip", help="categories to skip")
+    ap.add_argument("--frames", action="store_true", help="export every sprite frame as a separate static SVG")
+    ap.add_argument("--max-frames", type=int, default=0, help="max frames per animation (0 = unlimited)")
+    ap.add_argument("--raw", action="store_true", help="additionally dump raw tags")
+    ap.add_argument("--no-decompile", action="store_true", help="do not decompile ActionScript")
+    ap.add_argument("--list", action="store_true", help="only show the file contents summary")
     a = ap.parse_args()
     only = set(a.only.split(",")) if a.only else set(CATEGORIES3)
     if a.skip:
         only -= set(a.skip.split(","))
     files = collect(a.inputs)
     if not files:
-        print("файлы не найдены", file=sys.stderr)
+        print("no files found", file=sys.stderr)
         return 1
     for p in files:
         try:
             extract(p, a.out, only, a.raw, a.frames, a.max_frames, a.list, decompile=not a.no_decompile)
         except Exception as e:
-            print("%s: ошибка — %s" % (p, e), file=sys.stderr)
+            print("%s: error - %s" % (p, e), file=sys.stderr)
     return 0
 
 
